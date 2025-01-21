@@ -22,6 +22,18 @@ def main(args):
         smooth_pkl_file = os.path.join(output_dir,"input_smoothed.pkl")
         input_pkl = smooth_pkl(input_pkl,smooth_pkl_file)
         print("Reproducibility analysis smoothed input matrix saved to ",input_pkl)
+    if args.task==7:
+        from ops.file_format_check import check_bedpe
+        # Helper function to create a new .bedpe file 
+        # containing all valid rows from the original .bedpe file
+        valid_bedpe_path = check_bedpe(args, require_intra_chrom=True)
+        if valid_bedpe_path:
+            args.bedpe_path = valid_bedpe_path
+            print("Valid bedpe_path is at ", args.bedpe_path)
+        else:
+            print("Error in processing bedpe file. Task 7 terminated.")
+            exit(1)
+            
     from inference.main_worker import main_worker
     main_worker(args, input_pkl)
 
@@ -44,11 +56,17 @@ if __name__ == '__main__':
     elif args.task==5:
         print("scHi-C enhancement")
     elif args.task==6:
-        print("Hi-C embedding generation")
+        print("Hi-C embedding generation for all regions")
         embed_depth = args.embed_depth
         if embed_depth>8:
             print("Error: embed_depth is larger than 8, that is beyond decoder depth. Please set embed_depth<=8")
             print("0 indicates the encoder output, k indicates the k-th decoder layer's output")
+            exit(1)
+    elif args.task==7:
+        print("Hi-C embedding generation for specified regions")
+        bedpe_path = args.bedpe_path
+        if not bedpe_path.endswith(".bedpe"):
+            print("Error: needs to input a .bedpe file")
             exit(1)
     else:
         print("Unknown task specified ",args.task)

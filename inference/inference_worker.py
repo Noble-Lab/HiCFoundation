@@ -42,8 +42,10 @@ def inference_worker(model,data_loader,log_dir=None,args=None):
             mean_array = np.zeros([num_track,current_length])
             count_array = np.zeros([num_track,current_length])
             output_dict[chrom] = {"mean":mean_array,"count":count_array}
-    elif infer_task==6:
-        output_dict={"submat_embedding":defaultdict(list),"patch_embedding":defaultdict(list)}
+    elif infer_task in [6, 7]:
+        output_dict={"submat_embedding":defaultdict(list),
+                     "patch_embedding":defaultdict(list),
+                     "skipped_regions": []}
 
     if infer_task==3:
         #resolution enhancement
@@ -82,7 +84,7 @@ def inference_worker(model,data_loader,log_dir=None,args=None):
             output = torch.pow(10,output)-1
             output = torch.clamp(output,min=0)
 
-        elif infer_task==6:
+        elif infer_task in [6, 7]:
             #get the specified encoder/decoder layer's output
             output = output[args.embed_depth]
 
@@ -112,7 +114,14 @@ def inference_worker(model,data_loader,log_dir=None,args=None):
             #input_count = np.sum(current_input)
             #ignore empty matrix
             if np.isnan(np.sum(current_input)):
-                print("empty matrix:",chr,row_start,col_start)
+                print("empty matrix:",chr,row_start*config_resolution,row_end * config_resolution,col_start*config_resolution,col_end * config_resolution)
+                if infer_task in [6, 7]:
+                    output_dict["skipped_regions"].append([chr, 
+                                                           row_start * config_resolution,
+                                                           row_end * config_resolution,
+                                                           chr,
+                                                           col_start * config_resolution,
+                                                           col_end * config_resolution])
                 continue
 
             # # may be not necessary, will check if error happens
@@ -138,7 +147,7 @@ def inference_worker(model,data_loader,log_dir=None,args=None):
                 output_dict[chr]['mean'][:, row_start:row_end] += cur_output
                 output_dict[chr]['count'][:, row_start:row_end] += 1
 
-            elif infer_task==6:
+            elif infer_task in [6, 7]:
                 refer_row = row_start
                 refer_col = col_start
                 real_row_start = max(0,refer_row-args.input_row_size//2)
@@ -245,9 +254,10 @@ def inference_worker(model,data_loader,log_dir=None,args=None):
             return_dict[chrom] = np.triu(mean_array)
         return return_dict
 
-    elif infer_task==6:
+    elif infer_task in [6, 7]:
         #embedding generation
         return_dict={"submat_embedding":{},"patch_embedding":{},"chromo_embedding":{},"genome_embedding":{}}
+        return_dict["skipped_regions"] = output_dict["skipped_regions"]
 
         #read patch embedding in output_dict, average the same location embedding
         for key in output_dict["patch_embedding"]:

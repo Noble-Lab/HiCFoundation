@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 import torch
 import torch.utils.data
 import random
@@ -9,7 +10,9 @@ import pickle
 from ops.sparse_ops import array_to_coo
 
 class Inference_Dataset(torch.utils.data.Dataset):
-    def __init__(self,data_path,   
+    def __init__(self,data_path, 
+                bedpe_path="", 
+                resolution=10000, 
                 transform=None,
                 stride=20,
                 window_height= 224,
@@ -21,6 +24,7 @@ class Inference_Dataset(torch.utils.data.Dataset):
                 task=1):
         """
         #data_path: the path of the input data
+        #bedpe_path: the path of the bedpe file specifying genomic regions (task 7 only)
         #transform: the transform applied to the input data
         #stride: the stride of the sliding window
         #window_height: the height of the sliding window
@@ -46,6 +50,13 @@ class Inference_Dataset(torch.utils.data.Dataset):
         self.task = task
         half_window_width = self.window_width//2
         half_window_height = self.window_height//2
+
+        if self.task == 7:
+            # Task 7: Region-Specific Embedding Generation**
+            assert bedpe_path != "", "For Task 7, 'bedpe_path' must be provided."
+            self.process_bedpe_file(bedpe_path, resolution)
+            return
+        
         #revise the data to make it to be symmetrical
         for chrom in self.data:
             hic_data = self.data[chrom]
@@ -136,6 +147,111 @@ class Inference_Dataset(torch.utils.data.Dataset):
         self.data = new_data
         print("Total reads of input hic: ",self.total_count)
         print("Total number of input windows: ",len(self.input_index))
+
+    def process_bedpe_file(self, bedpe_path, resolution):
+        """
+        Process the bedpe file to populate self.input_index for Task 7.
+        Also processes all chromosomes to populate self.dataset_shape.
+        """
+        
+        def normalize_chrom_name(chrom):
+            return chrom if chrom.startswith("chr") else f"chr{chrom}"
+        
+        normalized_data = {}
+        for chrom in self.data:
+            normalized_key = normalize_chrom_name(chrom)
+            normalized_data[normalized_key] = self.data[chrom]
+        self.data = normalized_data
+        
+        new_data = {}
+        half_window_width = self.window_width // 2
+        half_window_height = self.window_height // 2
+
+        for chrom in self.data:
+            hic_data = self.data[chrom]
+            # Skip chromosomes smaller than half window height
+            if hic_data.shape[0] < half_window_height:
+                continue
+            self.total_count += np.sum(hic_data.data)   
+            combine_row = np.concatenate([hic_data.row, hic_data.col])
+            combine_col = np.concatenate([hic_data.col, hic_data.row])
+            combine_data = np.concatenate([hic_data.data, hic_data.data])
+            hic_data.row = combine_row
+            hic_data.col = combine_col
+            hic_data.data = combine_data  # Make data symmetrical
+
+            # Divide the diagonal region
+            select_index = (hic_data.row == hic_data.col)
+            hic_data.data[select_index] = hic_data.data[select_index] / 2
+
+            input_row_size = max(hic_data.shape[0], self.window_height)  # Padding if necessary
+            input_col_size = max(hic_data.shape[1], self.window_width)
+            final_hic_data = coo_matrix(
+                (hic_data.data, (hic_data.row, hic_data.col)),
+                shape=(input_row_size, input_col_size),
+                dtype=np.float32
+            )
+
+            new_data[chrom] = final_hic_data
+            self.dataset_shape[chrom] = final_hic_data.shape
+            row_size = final_hic_data.shape[0]
+            col_size = final_hic_data.shape[1]
+
+        self.data = new_data # Update the data
+        
+        bedpe_df = pd.read_csv(
+            bedpe_path,
+            sep='\t',
+            usecols = range(6),
+            header=None,
+            names=['chr1', 'start1', 'end1', 'chr2', 'start2', 'end2']
+        )
+        
+        bedpe_df['chr1'] = bedpe_df['chr1'].apply(normalize_chrom_name)
+        bedpe_df['chr2'] = bedpe_df['chr2'].apply(normalize_chrom_name)
+
+        # Ensure that chr1 and chr2 are the same for all entries
+        assert (bedpe_df['chr1'] == bedpe_df['chr2']).all(), \
+            "For Task 7, all entries in the bedpe file must have chr1 equal to chr2."
+
+        # Process each bedpe entry
+        for idx, row in bedpe_df.iterrows():
+            chrom = row['chr1']
+            # Convert positions to indices by dividing by resolution
+            row_start = row['start1'] // resolution
+            row_end = row['end1'] // resolution
+            col_start = row['start2'] // resolution
+            col_end = row['end2'] // resolution
+
+            # Retrieve the shape of the chromosome matrix
+            if chrom not in self.dataset_shape:
+                print(f"Chromosome {chrom} not found in data. Skipping entry {idx}.")
+                continue
+            row_size, col_size = self.dataset_shape[chrom]
+
+            # Boundary checks
+            if row_start >= row_size or col_start >= col_size:
+                print(f"Entry {idx} has starting positions exceeding matrix dimensions. Skipping.")
+                print("row_start, row_size, col_start, col_size: ", row_start, row_size, col_start, col_size)
+                continue
+            
+            row_max_bound = min(row_size, row_end)
+            col_max_bound = min(col_size, col_end)
+
+            # Append to input_index
+            # For Task 7, no need to adjust indices or subtract half window sizes
+            # col_middle_point is the average of col_start and col_end
+            col_middle_point = (col_start + col_max_bound) // 2
+            self.input_index.append((chrom, row_start, col_start, row_end, col_end, col_middle_point))
+
+        print(f"Total reads of input hic: {self.total_count}")
+        print(f"Total number of input windows for Task 7: {len(self.input_index)}")
+
+        # output_csv_path = os.path.join(os.path.dirname(self.data_path), "input_index.csv")
+        # df = pd.DataFrame(self.input_index, columns=["chrom", "row_start", "col_start", "row_end", "col_end", "middle_col_point"])
+        # df.to_csv(output_csv_path, index=False)
+        # print(f"Input index saved to {output_csv_path}.")
+        
     def __len__(self):
         return len(self.input_index)
     

@@ -23,7 +23,8 @@ class Finetune_Model_Head(nn.Module):
         task 3: resolution enhancement
         task 4: epigenomic assay prediction
         task 5: scHi-C enhancement
-        task 6: embedding analysis
+        task 6: embedding analysis for all regions
+        task 7: embedding analysis for specified regions
         """
 
         super().__init__()
@@ -160,7 +161,7 @@ class Finetune_Model_Head(nn.Module):
             total_count = torch.ones(img.shape[0]).to(img.device)
             total_count = total_count*1000000000
         x = self.forward_backbone(img,total_count)
-        if self.task==6:
+        if self.task in [6, 7]:
             embedding_list = []
             embedding_list.append(x)
         # embed tokens
@@ -181,10 +182,10 @@ class Finetune_Model_Head(nn.Module):
         # apply Transformer blocks
         for blk in self.decoder_blocks:
             x = blk(x)
-            if self.task==6:
+            if self.task in [6, 7]:
                 embedding_list.append(x)
         x = self.decoder_norm(x)
-        if self.task==6:
+        if self.task in [6, 7]:
             return embedding_list
         else:
             return x 
@@ -244,7 +245,7 @@ class Finetune_Model_Head(nn.Module):
             output = torch.stack(output, dim=1) #change to N, num_track, C
             return output
         
-        elif self.task==6:
+        elif self.task in [6, 7]:
             embedding_list = self.forward_decoder(img,
                                                 total_count=total_count)
             #remove cls and additional token, which is not very useful in pre-training
@@ -261,6 +262,6 @@ class Finetune_Model_Head(nn.Module):
 
         else:
             print("Task ",self.task," is not implemented")
-            print("Please specify the task using --task with 1,2,3,4,5,6")
+            print("Please specify the task using --task with 1,2,3,4,5,6,7")
             raise NotImplementedError(f"Task {self.task} is not implemented")
 

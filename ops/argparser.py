@@ -8,7 +8,8 @@ def argparser_infer():
     parser.add_argument('--input', type=str, help='a .hic/.cool/.pkl/.txt/.pairs/.npy file records Hi-C/scHi-C matrix')
     parser.add_argument('--resolution', default=10000, type=int,help='resolution of the input matrix')
     parser.add_argument("--task",default=0,type=int,help="1: Reproducibility analysis; \n 2: Loop calling; \n \
-                        3: Resolution enhancement; \n 4: Epigenomic assay prediction; \n 5: scHi-C enhancement")
+                        3: Resolution enhancement; \n 4: Epigenomic assay prediction; \n 5: scHi-C enhancement \n \
+                        6: Hi-C embedding generation for all regions \n 7. Hi-C embedding generation for specified regions")
     
     parser.add_argument('--input_row_size', default=224, type=int,
                         help='input submatrix row size')
@@ -33,6 +34,10 @@ def argparser_infer():
     parser.add_argument("--embed_depth",default=0,type=int,help="0: embedding from encoder; k: embedding from k-th layer of decoder; up to 8 indicating the final output of decoder.")
     parser.add_argument("--patch_embedding", action='store_true',
                         help='Record the patch embedding in the final output file. Default: False')
+    # argument only relevant for task 7: region-specific embedding
+    parser.add_argument('--bedpe_path', default="", type=str, 
+                        help='a .bedpe file specifying the rectangular genomic regions for extracting HiCfoundation embeddings (used only in Task 7)')
+   
     return parser
 
 def argparser_finetune():

@@ -1,6 +1,7 @@
 import torch
 import os
 import torch.nn as nn
+import pandas as pd
 from scipy.sparse import coo_matrix
 
 from utils.hic_coverage import calculate_coverage
@@ -51,7 +52,11 @@ def configure_dataset(args,input_pkl):
     input_row_size = args.input_row_size
     input_col_size = args.input_col_size
     task = args.task
-    dataset = Inference_Dataset(data_path=input_pkl,   
+    input_bedpe = args.bedpe_path
+    resolution = args.resolution
+    dataset = Inference_Dataset(data_path=input_pkl,
+                            bedpe_path=input_bedpe,
+                            resolution=resolution,    
                             transform=transform_input,
                             stride=stride,
                             window_height= input_row_size,
@@ -121,7 +126,7 @@ def main_worker(args, input_pkl):
     #should be a dyanmic input model
     patch_wise_size = (args.input_row_size//args.patch_size,args.input_col_size//args.patch_size)
     vit_backbone = Vision_Transformer.__dict__[args.model](img_size=(args.input_row_size,args.input_col_size))
-    if args.task==6:
+    if args.task in [6, 7]:
         # embedding genration inference
         # only load encoder weights
         checkpoint = torch.load(model_path, map_location='cpu')
@@ -147,7 +152,7 @@ def main_worker(args, input_pkl):
     
     
     #load model weights
-    if args.task!=6:
+    if args.task not in [6, 7]:
         checkpoint = torch.load(model_path, map_location='cpu')
         if "model" in checkpoint:
             checkpoint_model = checkpoint["model"]
@@ -240,10 +245,19 @@ def main_worker(args, input_pkl):
             print("scHi-C enhancement finished!")
             print("The final output is saved in .pkl format, please convert it to other formats manually.")
             print("The .pkl file is saved to ",output_path)
-    elif args.task==6:  
+    elif args.task in [6, 7]:  
         #embedding generation
+        output_skipped_path = os.path.join(output_dir,"skipped_regions.bedpe")
+        skipped_df = pd.DataFrame(return_dict["skipped_regions"], columns=["chrom1", "row_start", "row_end", "chrom2", "col_start", "col_end"])
+        skipped_df.to_csv(output_skipped_path, index = False, header = None, sep = "\t")
+        
         output_path = os.path.join(output_dir,"HiCFoundation_embedding.pkl")
-        write_pickle(return_dict,output_path)
+        return_dict_new = {}
+        return_dict_new["submat_embedding"] = return_dict["submat_embedding"]
+        return_dict_new["patch_embedding"] = return_dict["patch_embedding"]
+        return_dict_new["chromo_embedding"] = return_dict["chromo_embedding"]
+        return_dict_new["genome_embedding"] = return_dict["genome_embedding"]
+        write_pickle(return_dict_new,output_path)
         print("Hi-C embedding generation finished!")
         print("The embedding results are saved to ",output_path," in .pkl format.")
 
