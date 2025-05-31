@@ -447,7 +447,7 @@ It is a dict format that includes four keys that correspond to four level of emb
 #### Example command
 ```
 python3 inference.py --input example/4DNFITUOMFUQ.hic --batch_size 4 --resolution 10000 \
-  --task 6 --input_row_size 400 --input_col_size 400 --stride 80 --bound 200 
+  --task 6 --input_row_size 400 --input_col_size 400 --stride 80 --bound 200 \
   --model_path hicfoundation_model/hicfoundation_pretrain.pth.tar \
   --output hicfoundation_inference/hicfoundation_embedding/ --gpu "0" --embed_depth 0
 ```
