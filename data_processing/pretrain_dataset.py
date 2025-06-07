@@ -324,4 +324,7 @@ class Pretrain_Dataset(torch.utils.data.Dataset):
         input = self.convert_rgb(input,max_value)
         if self.transform is not None:
             input = self.transform(input)
+        # convert the diagonal position from pixel unit into patch unit
+        return_diag = int(return_diag / self.patch_size)
+        
         return list_to_tensor([input, mask_array, hic_count, return_diag,matrix_count])
