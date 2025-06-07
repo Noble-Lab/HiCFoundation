@@ -50,7 +50,7 @@ def apply_symmectric_noise(noise, diag):
                 row_end = N-cur_diag
                 col_end = N
             #make this region symmetric
-        cur_array[row_start:row_end, col_start:col_end] = cur_array[col_start:col_end, row_start:row_end]+cur_array[row_start:row_end, col_start:col_end].T
+        cur_array[row_start:row_end, col_start:col_end] = cur_array[row_start:row_end, col_start:col_end]+cur_array[row_start:row_end, col_start:col_end].T
         noise[k] = cur_array
     return noise
 class Models_HiCFoundation(nn.Module):
