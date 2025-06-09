@@ -76,8 +76,8 @@ def hic2array(input_hic,output_pkl=None,
         chrom_list.append(chrom)
         chrom_dict[chrom.name]=chrom.length
     resolution_list = hic.getResolutions()
-    max_resolution_candidate = max(resolution_list)
-    if not validate_resolution(resolution):
+    #max_resolution_candidate = max(resolution_list)
+    if not validate_resolution(resolution,resolution_list):
         print("Resolution not found in the hic file, please choose from the following list:")
         print(resolution_list)
         print("Any other resolution is coarse than this and dividable by one of them can also be supported.")
