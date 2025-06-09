@@ -42,6 +42,20 @@ def read_chrom_array(chr1, chr2, normalization, hic_file, resolution,call_resolu
 
     return mat_coo
 
+def validate_resolution(resolution,resolution_list):
+    for reso in resolution_list:
+        if resolution%reso==0:
+            return True
+    return False
+
+def find_call_resolution(resolution, resolution_list):
+    max_best_resolution = min(resolution_list)
+    resolution_list.sort()
+    for reso in resolution_list:
+        if resolution%reso==0:
+            if reso>max_best_resolution:
+                max_best_resolution=reso
+    return max_best_resolution
 
 def hic2array(input_hic,output_pkl=None,
               resolution=25000,normalization="NONE",
@@ -63,9 +77,10 @@ def hic2array(input_hic,output_pkl=None,
         chrom_dict[chrom.name]=chrom.length
     resolution_list = hic.getResolutions()
     max_resolution_candidate = max(resolution_list)
-    if resolution<=max_resolution_candidate and resolution not in resolution_list:
+    if not validate_resolution(resolution):
         print("Resolution not found in the hic file, please choose from the following list:")
         print(resolution_list)
+        print("Any other resolution is coarse than this and dividable by one of them can also be supported.")
         exit()
     output_dict={}
     for i in range(len(chrom_list)):
@@ -84,7 +99,7 @@ def hic2array(input_hic,output_pkl=None,
                 continue
             if "alt" in chrom1_name.lower() or "alt" in chrom2_name.lower():
                 continue
-            read_array=read_chrom_array(chrom1,chrom2, normalization, input_hic, resolution,call_resolution=min(resolution,max_resolution_candidate))
+            read_array=read_chrom_array(chrom1,chrom2, normalization, input_hic, resolution,call_resolution=find_call_resolution(resolution,resolution_list))
             if read_array is None:
                 print("No data found for",chrom1_name,chrom2_name)
                 continue
