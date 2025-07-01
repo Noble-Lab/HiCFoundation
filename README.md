@@ -126,6 +126,35 @@ Please run the following command to configure other packages
 pip3 install -r requirements.txt --user
 ```
 
+##### Option 3: install by docker
+##### 3.1 Install docker
+Install Docker from https://docs.docker.com/get-docker/.
+
+##### 3.2 Build and run HiCFoundation container
+```bash
+# Build the Docker image
+docker build -t hicfoundation .
+
+# Create directories
+mkdir -p data outputs
+
+# Run container interactively (with GPU)
+docker run --gpus all -it -v $(pwd)/data:/app/data -v $(pwd)/outputs:/app/outputs -v $(pwd):/app/code hicfoundation bash
+
+```
+
+##### 3.3 Setup inside container
+```bash
+# Activate conda environment
+conda activate HiCFoundation
+# Here pleaes install hic-straw if you use .hic, since sometimes docker can not work it well because of its C dependencies.
+# Now you can run any HiCFoundation commands instructed below
+python3 [Args]
+```
+
+
+
+
 ### 4. Download the trained HiCFoundation model
 You can download our pre-trained and fine-tuned model to ``hicfoundation_model`` for inference, embedding generation and fine-tuning purposes. <br>
 HiCFoundation model weights: [hicfoundation_model](https://huggingface.co/wang3702/hicfoundation_models/) <br>
