@@ -147,7 +147,6 @@ docker run --gpus all -it -v $(pwd)/data:/app/data -v $(pwd)/outputs:/app/output
 ```bash
 # Activate conda environment
 conda activate HiCFoundation
-# Here pleaes install hic-straw if you use .hic, since sometimes docker can not work it well because of its C dependencies.
 # Now you can run any HiCFoundation commands instructed below
 python3 [Args]
 ```

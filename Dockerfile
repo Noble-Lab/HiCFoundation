@@ -8,11 +8,15 @@ ENV PATH=$CONDA_DIR/bin:$PATH
 ENV PYTHONPATH=/app:$PYTHONPATH
 
 # Install system dependencies
+# configure hic-straw depdendencies
 RUN apt-get update && apt-get install -y \
     wget \
     curl \
     git \
     build-essential \
+    cmake \
+    libcurl4-openssl-dev \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Miniconda
@@ -60,6 +64,7 @@ RUN pip install \
     tensorboard \
     pyBigWig
 
+RUN pip install hic-straw
 
 # Set the default command to activate conda environment
 ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "HiCFoundation"]
