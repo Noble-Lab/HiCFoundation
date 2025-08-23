@@ -1,8 +1,9 @@
 """
     Code here is borrowed from the https://github.com/facebookresearch/deit/blob/main/utils.py
     This file includes two classes SmoothValue and MetricLoggers that are directly copied from the link above
-    The only two things new are the print_important_info and print_warning_info
-    I believe these classes and the new functions should be moved to a utils.py file
+    TODO: 
+    print_important_info and print_warning_info are new
+    move these classes and the new functions to a utils.py file
 """
 
 

@@ -41,7 +41,7 @@ def parse_text(config_file, data_dir):
 
         Suggestions: 
             1) Improve error handling, and the worker should not run if there are no valid paths in the list
-            2) There should be a single config file for the pahts
+            2) There should be a single config file for the paths
     """
     train_list = []
     with open(config_file) as f:
@@ -232,7 +232,7 @@ def main_worker(gpu, ngpus_per_node, args):
         log_writer = config_writer(output_dir, args.tensorboard)
 
 
-    cudnn.benchmark = True # Why?
+    cudnn.benchmark = True 
     device = torch.device(args.device)
 
     # Data loading code
